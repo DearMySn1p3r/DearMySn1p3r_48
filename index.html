@@ -63,7 +63,11 @@ input,textarea{font:inherit;color:inherit}
 .p2 .name{text-align:right}
 .name::placeholder{color:var(--faint);font-weight:500}
 .name:focus{border-bottom-color:var(--pc)}
-.x{font-size:18px;font-weight:300;color:var(--faint);flex-shrink:0}
+.mid{position:relative;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.x{font-size:18px;font-weight:300;line-height:1;color:var(--faint)}
+.swap{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:10.5px;color:var(--sub);white-space:nowrap;transition:color .15s,border-color .15s}
+.swap svg{width:11px;height:11px}
+@media (hover:hover){.swap:hover{color:var(--text);border-color:var(--faint)}}
 
 /* ---------- grid of quadrants ---------- */
 .grid{display:grid;grid-template-columns:1fr 1fr}
@@ -97,7 +101,7 @@ input,textarea{font:inherit;color:inherit}
 .c-meta i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--pc);margin-right:5px;vertical-align:1px}
 .c-meta b{font-weight:400;color:var(--text);display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .c-meta>span{min-width:0}
-.note{margin-top:8px;font-size:11.5px;line-height:1.55;color:var(--body);outline:none;min-height:18px;word-break:keep-all;border-radius:6px;padding:4px 6px;margin-left:-6px;margin-right:-6px}
+.note{white-space:pre-wrap;margin-top:8px;font-size:11.5px;line-height:1.55;color:var(--body);outline:none;min-height:18px;word-break:keep-all;border-radius:6px;padding:4px 6px;margin-left:-6px;margin-right:-6px}
 .note:empty::before{content:'근거 메모 (선택)';color:var(--faint)}
 .note:focus{background:var(--soft)}
 
@@ -163,6 +167,8 @@ input,textarea{font:inherit;color:inherit}
   .hero{padding:22px 12px 20px}
   .hd-t{font-size:42px}
   .people{gap:10px}
+  .swap{width:24px;height:24px;padding:0;justify-content:center}
+  .swap span{display:none}
   .person{flex-direction:column;gap:8px}
   .p2{flex-direction:column}
   .p-id,.p2 .p-id{align-items:center}
@@ -217,7 +223,7 @@ body.capturing{padding:0;background:transparent}
         </header>
         <section class="people">
           <div class="person p1" id="person1"></div>
-          <span class="x">×</span>
+          <div class="mid"><span class="x">×</span><button class="swap no-cap" id="swapBtn" title="두 사람 위치 바꾸기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg><span>바꾸기</span></button></div>
           <div class="person p2" id="person2"></div>
         </section>
       </div>
@@ -354,7 +360,15 @@ function buildPerson(p){
   const name=$('n'+n);
   name.value=state.names[p];
   name.addEventListener('input',()=>{state.names[p]=name.value.trim();renderNames();updateMeta();persist()});
-  name.addEventListener('keydown',e=>{if(e.key==='Enter')name.blur()});
+  let nameOrig='';
+  name.addEventListener('focus',()=>{nameOrig=name.value});
+  name.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.isComposing){e.preventDefault();name.blur();return}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){
+      e.preventDefault();e.stopPropagation();
+      name.value=nameOrig;state.names[p]=nameOrig.trim();renderNames();updateMeta();persist();name.blur();
+    }
+  });
 
   const sw=$('sw'+n);
   PALETTE.forEach(hex=>{
@@ -484,10 +498,25 @@ function buildGrid(){
     [0,1].forEach(p=>dragDot(ci,p));
     const note=$('note'+ci);
     note.textContent=state.notes[ci];
-    note.addEventListener('input',()=>{state.notes[ci]=note.textContent.trim();persist()});
-    note.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();note.blur()}});
-    note.addEventListener('blur',()=>{if(!note.textContent.trim())note.textContent=''});
-    note.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text').replace(/\s+/g,' '))});
+    let orig='';
+    const readNote=()=>note.innerText.replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+    note.addEventListener('focus',()=>{orig=state.notes[ci]});
+    note.addEventListener('input',()=>{state.notes[ci]=readNote();persist()});
+    note.addEventListener('keydown',e=>{
+      if(e.isComposing)return;
+      if(e.key==='Enter'){
+        e.preventDefault();
+        if(e.ctrlKey||e.metaKey)document.execCommand('insertLineBreak');
+        else note.blur();
+        return;
+      }
+      if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){
+        e.preventDefault();e.stopPropagation();
+        note.textContent=orig;state.notes[ci]=orig;persist();note.blur();
+      }
+    });
+    note.addEventListener('blur',()=>{const v=readNote();state.notes[ci]=v;note.textContent=v;persist()});
+    note.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text').replace(/\r\n?/g,'\n').replace(/[ \t]+/g,' ');document.execCommand('insertText',false,t)});
   });
   placeAll();
 }
@@ -655,7 +684,28 @@ function setPanel(open){
 $('colorBtn').onclick=e=>{e.stopPropagation();setPanel(!panel.classList.contains('open'))};
 $('pnClose').onclick=()=>setPanel(false);
 document.addEventListener('click',e=>{if(panel.classList.contains('open')&&!panel.contains(e.target)&&!$('colorBtn').contains(e.target))setPanel(false)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){setPanel(false);setModal(false)}});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){setPanel(false);setModal(false)}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();setPanel(false);setModal(false)}
+});
+
+/* ================= swap A <-> B ================= */
+$('swapBtn').onclick=()=>{
+  ['names','colors','photos','ph'].forEach(k=>state[k].reverse());
+  state.pts.forEach(pair=>pair.reverse());
+  dims.reverse();
+  [0,1].forEach(p=>{
+    const n=p+1;
+    $('n'+n).value=state.names[p];
+    const img=$('pi'+n);img.removeAttribute('src');img.style.transform='';
+    if(dims[p]){img.style.width=dims[p].w+'px';img.style.height=dims[p].h+'px'}
+    renderPhoto(p);
+    if(state.photos[p]&&dims[p])applyPan(p);
+    setColor(p,state.colors[p]);
+  });
+  renderNames();placeAll();persist();
+  toast('두 사람 위치를 바꿨어요');
+};
 
 /* ================= reset ================= */
 $('resetBtn').onclick=()=>{
