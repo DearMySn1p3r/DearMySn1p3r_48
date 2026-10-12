@@ -59,7 +59,6 @@ input,textarea{font:inherit;color:inherit}
 .av-edit svg{width:9px;height:9px}
 .p-id{display:flex;flex-direction:column;gap:3px;min-width:0}
 .p2 .p-id{align-items:flex-end}
-.role{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--pc)}
 .name{display:block;width:120px;border:none;outline:none;background:transparent;font-size:15px;font-weight:600;line-height:1.3;padding:1px 0 4px;border-bottom:1px solid var(--line);transition:border-color .2s}
 .p2 .name{text-align:right}
 .name::placeholder{color:var(--faint);font-weight:500}
@@ -230,8 +229,8 @@ body.capturing{padding:0;background:transparent}
 
 <div class="panel no-cap" id="panel" aria-hidden="true">
   <div class="pn-head"><span>컬러</span><button class="pn-x" id="pnClose" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="pn-sec"><p class="pn-k" id="pk1">PC 컬러</p><div class="pn-row" id="sw1"></div></div>
-  <div class="pn-sec"><p class="pn-k" id="pk2">NPC 컬러</p><div class="pn-row" id="sw2"></div></div>
+  <div class="pn-sec"><p class="pn-k" id="pk1">A 컬러</p><div class="pn-row" id="sw1"></div></div>
+  <div class="pn-sec"><p class="pn-k" id="pk2">B 컬러</p><div class="pn-row" id="sw2"></div></div>
   <div class="pn-sec"><p class="pn-k">배경 <span class="pn-h" id="gname"></span></p><div class="pn-row" id="pg"></div></div>
 </div>
 
@@ -338,7 +337,7 @@ function persist(){
 
 /* ================= helpers ================= */
 const $=id=>document.getElementById(id);
-const displayName=p=>state.names[p]||ROLES[p];
+const displayName=p=>state.names[p]||(p?'B':'A');
 function rgba(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
 function shade(hex,f){const n=parseInt(hex.slice(1),16);const c=v=>Math.round(Math.min(255,v*f)).toString(16).padStart(2,'0');return '#'+c(n>>16&255)+c(n>>8&255)+c(n&255)}
 let toastT;
@@ -351,7 +350,7 @@ function buildPerson(p){
   $('person'+n).innerHTML=
     `<div class="av-wrap"><div class="avatar"><label for="ph${n}" class="av-init" id="init${n}" aria-label="사진 선택"></label><div class="av-img" id="iw${n}"><img id="pi${n}" alt="" draggable="false"></div></div><label for="ph${n}" class="av-edit no-cap" title="사진 선택" aria-label="사진 선택">${PLUS}</label></div>`+
     `<input type="file" accept="image/*" id="ph${n}" hidden>`+
-    `<div class="p-id"><span class="role">${ROLES[p]}</span><input class="name" id="n${n}" placeholder="이름" maxlength="12" autocomplete="off" enterkeyhint="done"></div>`;
+    `<div class="p-id"><input class="name" id="n${n}" placeholder="이름" maxlength="12" autocomplete="off" enterkeyhint="done"></div>`;
   const name=$('n'+n);
   name.value=state.names[p];
   name.addEventListener('input',()=>{state.names[p]=name.value.trim();renderNames();updateMeta();persist()});
@@ -393,7 +392,7 @@ function updateAccent(){
   r.setProperty('--t2',shade(state.colors[1],.92));
 }
 function renderNames(){
-  [0,1].forEach(p=>{$('pk'+(p+1)).textContent=state.names[p]?`${ROLES[p]} · ${state.names[p]} 컬러`:`${ROLES[p]} 컬러`});
+  [0,1].forEach(p=>{$('pk'+(p+1)).textContent=displayName(p)+' 컬러'});
 }
 
 /* ================= photo ================= */
@@ -478,7 +477,7 @@ function buildGrid(){
       `<p class="c-desc">${ch.desc}</p>`+
       `<div class="plot"><span class="pole t">${ch.top}</span><span class="pole b">${ch.bottom}</span><span class="pole l">${ch.left}</span><span class="pole r">${ch.right}</span>`+
       `<div class="box" id="box${ci}"><div class="grid4"></div><div class="ax-v"></div><div class="ax-h"></div><div class="link" id="link${ci}"></div>`+
-      `<div class="dot p2" id="d${ci}-1" role="slider" tabindex="0" aria-label="${ROLES[1]} 위치"></div><div class="dot p1" id="d${ci}-0" role="slider" tabindex="0" aria-label="${ROLES[0]} 위치"></div></div></div>`+
+      `<div class="dot p2" id="d${ci}-1" role="slider" tabindex="0" aria-label="B 위치"></div><div class="dot p1" id="d${ci}-0" role="slider" tabindex="0" aria-label="A 위치"></div></div></div>`+
       `<div class="c-meta" id="meta${ci}"></div>`+
       `<div class="note" id="note${ci}" contenteditable="true" spellcheck="false"></div>`;
     g.appendChild(cell);
