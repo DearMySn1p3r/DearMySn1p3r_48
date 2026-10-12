@@ -506,7 +506,7 @@ function buildGrid(){
       if(e.isComposing)return;
       if(e.key==='Enter'){
         e.preventDefault();
-        if(e.ctrlKey||e.metaKey)document.execCommand('insertLineBreak');
+        if(e.shiftKey)document.execCommand('insertLineBreak');
         else note.blur();
         return;
       }
@@ -691,7 +691,8 @@ document.addEventListener('keydown',e=>{
 
 /* ================= swap A <-> B ================= */
 $('swapBtn').onclick=()=>{
-  ['names','colors','photos','ph'].forEach(k=>state[k].reverse());
+  // colors stay with the side (left/right); the characters and their dots move
+  ['names','photos','ph'].forEach(k=>state[k].reverse());
   state.pts.forEach(pair=>pair.reverse());
   dims.reverse();
   [0,1].forEach(p=>{
